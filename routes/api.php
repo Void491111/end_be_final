@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\OrderController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\DashboardController;
 
 // Public
 Route::post('/login', [AuthController::class, 'login']);
@@ -14,6 +15,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/dashboard/weekly-revenue', [DashboardController::class, 'weeklyRevenue']);
 
     // Catalog
     Route::get('/categories', [CategoryController::class, 'index']);
