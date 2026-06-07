@@ -11,30 +11,39 @@ class OrderInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('queue_number'),
-                TextEntry::make('user_id')
-                    ->numeric(),
-                TextEntry::make('order_type'),
+                TextEntry::make('queue_number')
+                    ->label('Queue #')
+                    ->weight('bold'),
+                TextEntry::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'completed' => 'success',
+                        'voided' => 'danger',
+                        default => 'gray',
+                    }),
+                TextEntry::make('order_type')
+                    ->label('Type')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state === 'dine_in' ? 'Dine In' : 'Takeaway'),
+                TextEntry::make('user.name')
+                    ->label('Cashier'),
                 TextEntry::make('subtotal')
-                    ->numeric(),
+                    ->money('IDR'),
                 TextEntry::make('tax')
-                    ->numeric(),
+                    ->money('IDR'),
                 TextEntry::make('total')
-                    ->numeric(),
-                TextEntry::make('payment_method'),
-                TextEntry::make('status'),
-                TextEntry::make('voided_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('voided_reason')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
+                    ->money('IDR')
+                    ->weight('bold'),
+                TextEntry::make('payment_method')
+                    ->label('Payment'),
                 TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
+                    ->dateTime('d M Y, H:i'),
+                TextEntry::make('voided_at')
+                    ->dateTime('d M Y, H:i')
+                    ->visible(fn ($record) => $record?->status === 'voided'),
+                TextEntry::make('voided_reason')
+                    ->visible(fn ($record) => $record?->status === 'voided')
+                    ->columnSpanFull(),
             ]);
     }
 }
