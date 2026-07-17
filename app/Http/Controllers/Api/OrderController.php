@@ -11,7 +11,6 @@ use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
-    // POST /api/orders
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -44,17 +43,21 @@ class OrderController extends Controller
                 ];
             }
 
-            $tax = $subtotal * 0.10; // 10% tax
+            $tax = $subtotal * 0.10;
             $total = $subtotal + $tax;
 
             $order = Order::create([
                 'queue_number' => Order::generateQueueNumber(),
                 'user_id' => $request->user()->id,
+                'source' => 'cashier',
+                'table_id' => null,
                 'order_type' => $validated['order_type'],
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'total' => $total,
                 'payment_method' => 'cash',
+                'payment_status' => 'settlement',
+                'paid_at' => now(),
                 'status' => 'completed',
             ]);
 
@@ -64,23 +67,23 @@ class OrderController extends Controller
         });
     }
 
-    // GET /api/orders
     public function index(Request $request)
     {
-        $query = Order::with(['items', 'user:id,name'])
+        $query = Order::with(['items', 'user:id,name', 'table:id,code,name'])
             ->orderBy('created_at', 'desc');
 
-        // Filter by period
         if ($period = $request->input('period')) {
             $this->applyPeriodFilter($query, $period);
         }
 
-        // Filter by status
         if ($status = $request->input('status')) {
             $query->where('status', $status);
         }
 
-        // Search by queue number
+        if ($source = $request->input('source')) {
+            $query->where('source', $source);
+        }
+
         if ($search = $request->input('search')) {
             $query->where('queue_number', 'like', "%{$search}%");
         }
@@ -88,21 +91,19 @@ class OrderController extends Controller
         return $query->paginate(20);
     }
 
-    // GET /api/orders/{order}
     public function show(Order $order)
     {
-        return $order->load(['items', 'user:id,name']);
+        return $order->load(['items', 'user:id,name', 'table:id,code,name']);
     }
 
-    // PATCH /api/orders/{order}/void
     public function void(Request $request, Order $order)
     {
         $validated = $request->validate([
             'voided_reason' => 'required|string|min:3',
         ]);
 
-        if ($order->status === 'voided') {
-            abort(422, 'Order sudah di-void sebelumnya.');
+        if (in_array($order->status, ['voided', 'expired'])) {
+            abort(422, 'Order sudah tidak aktif.');
         }
 
         $order->update([
@@ -114,7 +115,6 @@ class OrderController extends Controller
         return response()->json($order->fresh('items'));
     }
 
-    // GET /api/orders/stats
     public function stats(Request $request)
     {
         $query = Order::query();
@@ -135,7 +135,6 @@ class OrderController extends Controller
         ]);
     }
 
-    // Helper: apply period filter
     private function applyPeriodFilter($query, string $period): void
     {
         match ($period) {
