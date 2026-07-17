@@ -4,14 +4,18 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PublicController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\DashboardController;
 
 // Public
 Route::post('/login', [AuthController::class, 'login']);
 
-// Public — buat customer self-order via QR (no auth)
+// Public — buat customer self-order via QR meja
 Route::prefix('public')->group(function () {
+    Route::get('/tables/{code}', [PublicController::class, 'validateTable']);
+    Route::get('/menus', [PublicController::class, 'menus']);
+    Route::get('/categories', [PublicController::class, 'categories']);
     Route::get('/recommendations', [MenuController::class, 'recommendations']);
 });
 
