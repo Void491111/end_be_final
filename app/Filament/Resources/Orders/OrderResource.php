@@ -57,7 +57,7 @@ class OrderResource extends Resource
 
     public static function canEdit($record): bool
     {
-        return false; // Order immutable, pake Void
+        return $record?->source === 'customer_qr'; // Order immutable, pake Void
     }
 
     public static function canDelete($record): bool
