@@ -18,12 +18,22 @@ class Menu extends Model
         'is_available',
     ];
 
+    // Auto-append imageUrl ke JSON response
+    protected $appends = ['imageUrl'];
+
     protected function casts(): array
     {
         return [
             'price' => 'decimal:2',
             'is_available' => 'boolean',
         ];
+    }
+
+    // Accessor: convert image path → full URL
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) return null;
+        return asset('storage/' . $this->image);
     }
 
     public function category()
