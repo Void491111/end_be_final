@@ -34,7 +34,7 @@ class Menu extends Model
     {
         if (!$this->image) return null;
         $base = env('IMAGE_BASE_URL') ?: config('app.url');
-        return rtrim($base, '/') . '/storage/' . $this->image;
+        return rtrim($base, '/') . '/img/' . $this->image;
     }
 
     public function category()
