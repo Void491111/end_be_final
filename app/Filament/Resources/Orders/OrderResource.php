@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use App\Filament\Resources\Orders\Pages\EditOrder;
 
 class OrderResource extends Resource
 {
@@ -47,6 +48,7 @@ class OrderResource extends Resource
         return [
             'index' => ListOrders::route('/'),
             'view' => ViewOrder::route('/{record}'),
+            'edit' => EditOrder::route('/{record}/edit'),
         ];
     }
 
