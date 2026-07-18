@@ -33,7 +33,8 @@ class Menu extends Model
     public function getImageUrlAttribute(): ?string
     {
         if (!$this->image) return null;
-        return asset('storage/' . $this->image);
+        $base = env('IMAGE_BASE_URL') ?: config('app.url');
+        return rtrim($base, '/') . '/storage/' . $this->image;
     }
 
     public function category()
