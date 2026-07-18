@@ -90,6 +90,7 @@ class MenuController extends Controller
                 'description' => $menu->description,
                 'price' => $menu->price,
                 'image' => $menu->image,
+                'imgeUrl' => $menu->imageUrl,
                 'category' => $menu->category,
                 'total_sold' => $bestSellers[$menu->id] ?? 0,
             ];
