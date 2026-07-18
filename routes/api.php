@@ -17,6 +17,11 @@ Route::prefix('public')->group(function () {
     Route::get('/menus', [PublicController::class, 'menus']);
     Route::get('/categories', [PublicController::class, 'categories']);
     Route::get('/recommendations', [MenuController::class, 'recommendations']);
+
+    // Batch 5B
+    Route::post('/orders', [PublicController::class, 'createOrder']);
+    // Batch 5C (status polling) — endpoint siap, page FE nyusul
+    Route::get('/orders/{id}/status', [PublicController::class, 'orderStatus']);
 });
 
 // Protected
