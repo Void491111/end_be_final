@@ -20,6 +20,7 @@ Route::prefix('public')->group(function () {
 
     Route::post('/orders', [PublicOrderController::class, 'store']);
     Route::get('/orders/{id}/status', [PublicOrderController::class, 'status']);
+    Route::post('/orders/{id}/simulate-payment', [PublicOrderController::class, 'simulatePayment']);
 });
 
 // Protected
