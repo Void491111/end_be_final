@@ -9,7 +9,7 @@ use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-// Public endpoints untuk customer QR flow: submit order + polling status
+// Public endpoints untuk customer QR flow: submit order + polling status + simulate payment
 class PublicOrderController extends Controller
 {
     // POST /api/public/orders
@@ -45,11 +45,11 @@ class PublicOrderController extends Controller
                 'subtotal' => $subtotal,
                 'tax' => $tax,
                 'total' => $subtotal + $tax,
-                'payment_method' => 'cash', // placeholder — Batch 6 ganti Midtrans
+                'payment_method' => 'qris_midtrans',
                 'payment_status' => 'pending',
                 'paid_at' => null,
                 'status' => 'pending_payment',
-                'voided_reason' => $notes ?: null, // hack sementara buat notes per-item
+                'voided_reason' => $notes ?: null,
             ]);
 
             $order->items()->createMany($itemsData);
@@ -70,6 +70,37 @@ class PublicOrderController extends Controller
         }
 
         return response()->json($this->orderPayload($order));
+    }
+
+    // POST /api/public/orders/{id}/simulate-payment
+    // SIMULATE Midtrans QRIS settlement (buat demo lokal — di production akan digantikan webhook Midtrans)
+    // Cuma boleh dari pending_payment; guard idempotent — kalo udah paid, no-op
+    public function simulatePayment(int $id)
+    {
+        $order = Order::where('source', 'customer_qr')->find($id);
+
+        if (!$order) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+        }
+
+        if ($order->status !== 'pending_payment') {
+            return response()->json([
+                'message' => 'Pesanan tidak dalam status menunggu pembayaran',
+                'current_status' => $order->status,
+            ], 409);
+        }
+
+        $order->update([
+            'payment_status' => 'settlement',
+            'paid_at' => now(),
+            'status' => 'paid',
+            'midtrans_transaction_id' => 'SIMULATED-' . uniqid(),
+        ]);
+
+        return response()->json([
+            'message' => 'Pembayaran berhasil (simulasi)',
+            'order' => $this->orderPayload($order->fresh(['items', 'table'])),
+        ]);
     }
 
     private function buildItems(array $items): array
