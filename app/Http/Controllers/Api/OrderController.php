@@ -5,144 +5,167 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Menu;
 use App\Models\Order;
+use App\Models\Table;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
-class OrderController extends Controller
+// Public endpoints untuk customer QR flow: submit order + polling status + simulate payment
+class PublicOrderController extends Controller
 {
+    // POST /api/public/orders
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'order_type' => ['required', Rule::in(['dine_in', 'takeaway'])],
+            'table_code' => 'required|string|exists:tables,code',
+            'customer_name' => 'required|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.menu_id' => 'required|exists:menus,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|integer|min:1|max:20',
+            'items.*.notes' => 'nullable|string|max:200',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
-            $subtotal = 0;
-            $itemsData = [];
+        return DB::transaction(function () use ($validated) {
+            $table = Table::where('code', $validated['table_code'])->first();
 
-            foreach ($validated['items'] as $item) {
-                $menu = Menu::find($item['menu_id']);
-
-                if (! $menu->is_available) {
-                    abort(422, "{$menu->name} sedang tidak tersedia.");
-                }
-
-                $itemSubtotal = $menu->price * $item['quantity'];
-                $subtotal += $itemSubtotal;
-
-                $itemsData[] = [
-                    'menu_id' => $menu->id,
-                    'menu_name_snapshot' => $menu->name,
-                    'price_snapshot' => $menu->price,
-                    'quantity' => $item['quantity'],
-                    'subtotal' => $itemSubtotal,
-                ];
+            if (!$table->is_active) {
+                abort(403, 'Meja tidak aktif');
             }
 
+            [$subtotal, $itemsData] = $this->buildItems($validated['items']);
             $tax = $subtotal * 0.10;
-            $total = $subtotal + $tax;
+            $notes = $this->composeNotes($validated['items']);
 
             $order = Order::create([
                 'queue_number' => Order::generateQueueNumber(),
-                'user_id' => $request->user()->id,
-                'source' => 'cashier',
-                'table_id' => null,
-                'order_type' => $validated['order_type'],
+                'user_id' => null,
+                'source' => 'customer_qr',
+                'table_id' => $table->id,
+                'customer_name' => $validated['customer_name'],
+                'order_type' => 'dine_in',
                 'subtotal' => $subtotal,
                 'tax' => $tax,
-                'total' => $total,
-                'payment_method' => 'cash',
-                'payment_status' => 'settlement',
-                'paid_at' => now(),
-                'status' => 'completed',
+                'total' => $subtotal + $tax,
+                'payment_method' => 'qris_midtrans',
+                'payment_status' => 'pending',
+                'paid_at' => null,
+                'status' => 'pending_payment',
+                'voided_reason' => $notes ?: null,
             ]);
 
             $order->items()->createMany($itemsData);
 
-            return response()->json($order->load('items', 'user:id,name'), 201);
+            return response()->json($this->orderPayload($order->fresh(['items', 'table']), 'Pesanan berhasil dibuat'), 201);
         });
     }
 
-    public function index(Request $request)
+    // GET /api/public/orders/{id}/status
+    public function status(int $id)
     {
-        $query = Order::with(['items', 'user:id,name', 'table:id,code,name'])
-            ->orderBy('created_at', 'desc');
+        $order = Order::where('source', 'customer_qr')
+            ->with('table:id,code,name', 'items')
+            ->find($id);
 
-        if ($period = $request->input('period')) {
-            $this->applyPeriodFilter($query, $period);
+        if (!$order) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        if ($source = $request->input('source')) {
-            $query->where('source', $source);
-        }
-
-        if ($search = $request->input('search')) {
-            $query->where('queue_number', 'like', "%{$search}%");
-        }
-
-        return $query->paginate(20);
+        return response()->json($this->orderPayload($order));
     }
 
-    public function show(Order $order)
+    // POST /api/public/orders/{id}/simulate-payment
+    // SIMULATE Midtrans QRIS settlement (buat demo lokal — di production akan digantikan webhook Midtrans)
+    // Cuma boleh dari pending_payment; guard idempotent — kalo udah paid, no-op
+    public function simulatePayment(int $id)
     {
-        return $order->load(['items', 'user:id,name', 'table:id,code,name']);
-    }
+        $order = Order::where('source', 'customer_qr')->find($id);
 
-    public function void(Request $request, Order $order)
-    {
-        $validated = $request->validate([
-            'voided_reason' => 'required|string|min:3',
-        ]);
+        if (!$order) {
+            return response()->json(['message' => 'Pesanan tidak ditemukan'], 404);
+        }
 
-        if (in_array($order->status, ['voided', 'expired'])) {
-            abort(422, 'Order sudah tidak aktif.');
+        if ($order->status !== 'pending_payment') {
+            return response()->json([
+                'message' => 'Pesanan tidak dalam status menunggu pembayaran',
+                'current_status' => $order->status,
+            ], 409);
         }
 
         $order->update([
-            'status' => 'voided',
-            'voided_at' => now(),
-            'voided_reason' => $validated['voided_reason'],
+            'payment_status' => 'settlement',
+            'paid_at' => now(),
+            'status' => 'paid',
+            'midtrans_transaction_id' => 'SIMULATED-' . uniqid(),
         ]);
-
-        return response()->json($order->fresh('items'));
-    }
-
-    public function stats(Request $request)
-    {
-        $query = Order::query();
-
-        if ($period = $request->input('period', 'today')) {
-            $this->applyPeriodFilter($query, $period);
-        }
-
-        $completed = (clone $query)->where('status', 'completed');
-        $voided = (clone $query)->where('status', 'voided');
 
         return response()->json([
-            'total_orders' => $completed->count(),
-            'total_revenue' => (float) $completed->sum('total'),
-            'avg_order' => (float) ($completed->avg('total') ?? 0),
-            'voided_count' => $voided->count(),
-            'voided_amount' => (float) $voided->sum('total'),
+            'message' => 'Pembayaran berhasil (simulasi)',
+            'order' => $this->orderPayload($order->fresh(['items', 'table'])),
         ]);
     }
 
-    private function applyPeriodFilter($query, string $period): void
+    private function buildItems(array $items): array
     {
-        match ($period) {
-            'today' => $query->whereDate('created_at', today()),
-            '7d' => $query->where('created_at', '>=', now()->subDays(7)),
-            '30d' => $query->where('created_at', '>=', now()->subDays(30)),
-            '90d' => $query->where('created_at', '>=', now()->subDays(90)),
-            default => null,
-        };
+        $subtotal = 0;
+        $data = [];
+
+        foreach ($items as $item) {
+            $menu = Menu::find($item['menu_id']);
+
+            if (!$menu->is_available) {
+                abort(422, "{$menu->name} sedang tidak tersedia.");
+            }
+
+            $lineSubtotal = $menu->price * $item['quantity'];
+            $subtotal += $lineSubtotal;
+
+            $data[] = [
+                'menu_id' => $menu->id,
+                'menu_name_snapshot' => $menu->name,
+                'price_snapshot' => $menu->price,
+                'quantity' => $item['quantity'],
+                'subtotal' => $lineSubtotal,
+            ];
+        }
+
+        return [$subtotal, $data];
+    }
+
+    private function composeNotes(array $items): string
+    {
+        return collect($items)
+            ->filter(fn ($i) => !empty($i['notes'] ?? null))
+            ->map(fn ($i) => Menu::find($i['menu_id'])->name . ': ' . $i['notes'])
+            ->implode(' | ');
+    }
+
+    private function orderPayload(Order $order, ?string $message = null): array
+    {
+        $payload = [
+            'id' => $order->id,
+            'queue_number' => $order->queue_number,
+            'status' => $order->status,
+            'payment_status' => $order->payment_status,
+            'subtotal' => $order->subtotal,
+            'tax' => $order->tax,
+            'total' => $order->total,
+            'customer_name' => $order->customer_name,
+            'table' => $order->table ? [
+                'code' => $order->table->code,
+                'name' => $order->table->name,
+            ] : null,
+            'items' => $order->items->map(fn ($i) => [
+                'menu_name' => $i->menu_name_snapshot,
+                'quantity' => $i->quantity,
+                'subtotal' => $i->subtotal,
+            ]),
+            'created_at' => $order->created_at,
+            'paid_at' => $order->paid_at,
+        ];
+
+        if ($message) {
+            $payload['message'] = $message;
+        }
+
+        return $payload;
     }
 }
