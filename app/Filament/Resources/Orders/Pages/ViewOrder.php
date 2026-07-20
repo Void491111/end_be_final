@@ -13,7 +13,10 @@ class ViewOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
+            // Tombol Edit cuma muncul buat order QR (butuh transisi status).
+            // Order kasir langsung completed = immutable, gak ada yg diedit.
+            EditAction::make()
+                ->visible(fn ($record) => $record->source === 'customer_qr'),
         ];
     }
 }
