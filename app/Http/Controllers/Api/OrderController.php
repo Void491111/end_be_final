@@ -145,4 +145,74 @@ class OrderController extends Controller
             default => null,
         };
     }
+
+    // ── Batch 7: Cashier QR Queue ──────────────────────────────
+
+public function queue()
+{
+    $orders = Order::with(['items.menu', 'table'])
+        ->where('source', 'customer_qr')
+        ->whereIn('status', ['paid', 'preparing'])
+        ->orderBy('created_at')
+        ->get()
+        ->map(fn ($o) => $this->transformQueueOrder($o));
+
+    return response()->json(['data' => $orders]);
+}
+
+    public function queueCount()
+    {
+        $count = Order::where('source', 'customer_qr')
+            ->where('status', 'paid')
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
+
+    public function confirm(Order $order)
+    {
+        if ($order->source !== 'customer_qr' || $order->status !== 'paid') {
+            return response()->json(['message' => 'Order tidak bisa dikonfirmasi'], 409);
+        }
+        $order->update(['status' => 'preparing']);
+        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items.menu', 'table']))]);
+    }
+
+    public function complete(Order $order)
+    {
+        if ($order->source !== 'customer_qr' || $order->status !== 'preparing') {
+            return response()->json(['message' => 'Order belum siap diselesaikan'], 409);
+        }
+        $order->update(['status' => 'completed', 'completed_at' => now()]);
+        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items.menu', 'table']))]);
+    }
+
+    public function reject(Request $request, Order $order)
+    {
+        $data = $request->validate(['reason' => 'required|string|max:255']);
+        if ($order->source !== 'customer_qr' || !in_array($order->status, ['paid', 'preparing'])) {
+            return response()->json(['message' => 'Order tidak bisa ditolak'], 409);
+        }
+        $order->update(['status' => 'voided', 'voided_reason' => $data['reason']]);
+        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items.menu', 'table']))]);
+    }
+
+    private function transformQueueOrder(Order $o): array
+    {
+        return [
+                'id'            => $o->id,
+                'queue_number'  => $o->queue_number,
+                'table_code'    => $o->table?->code,
+                'customer_name' => $o->customer_name,
+                'status'        => $o->status,
+                'total'         => (float) $o->total,
+                'notes'         => $o->voided_reason, // per-item notes hack
+                'paid_at'       => $o->paid_at,
+                'created_at'    => $o->created_at,
+                'items'         => $o->items->map(fn ($it) => [
+                'name'          => $it->menu?->name ?? '—',
+                'quantity'      => $it->quantity,
+            ]),
+        ];
+    }
 }
