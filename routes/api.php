@@ -35,6 +35,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/menus/{menu}/availability', [MenuController::class, 'toggleAvailability']);
 
     Route::get('/orders/stats', [OrderController::class, 'stats']);
+
+    // ── Batch 7: Cashier QR Queue (HARUS di atas orders/{order}) ──
+    Route::get('/orders/queue', [OrderController::class, 'queue']);
+    Route::get('/orders/queue/count', [OrderController::class, 'queueCount']);
+    Route::patch('/orders/{order}/confirm', [OrderController::class, 'confirm']);
+    Route::patch('/orders/{order}/reject', [OrderController::class, 'reject']);
+    Route::patch('/orders/{order}/complete', [OrderController::class, 'complete']);
+
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
