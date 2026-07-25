@@ -40,6 +40,20 @@ class Order extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Auto-hapus notif lonceng admin saat order ditandai selesai,
+        // biar badge cuma nyisain order yang belum dihandle.
+        // Match via queue_number yang ada di body notif ("Antrian #A092").
+        static::updated(function (Order $order) {
+            if ($order->wasChanged('status') && $order->status === 'completed') {
+                \Illuminate\Support\Facades\DB::table('notifications')
+                    ->where('data', 'like', '%Antrian #' . $order->queue_number . '%')
+                    ->delete();
+            }
+        });
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
