@@ -148,17 +148,17 @@ class OrderController extends Controller
 
     // ── Batch 7: Cashier QR Queue ──────────────────────────────
 
-public function queue()
-{
-    $orders = Order::with(['items.menu', 'table'])
-        ->where('source', 'customer_qr')
-        ->whereIn('status', ['paid', 'preparing'])
-        ->orderBy('created_at')
-        ->get()
-        ->map(fn ($o) => $this->transformQueueOrder($o));
+    public function queue()
+    {
+        $orders = Order::with(['items', 'table'])
+            ->where('source', 'customer_qr')
+            ->whereIn('status', ['paid', 'preparing'])
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn ($o) => $this->transformQueueOrder($o));
 
-    return response()->json(['data' => $orders]);
-}
+        return response()->json(['data' => $orders]);
+    }
 
     public function queueCount()
     {
@@ -175,7 +175,7 @@ public function queue()
             return response()->json(['message' => 'Order tidak bisa dikonfirmasi'], 409);
         }
         $order->update(['status' => 'preparing']);
-        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items.menu', 'table']))]);
+        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items', 'table']))]);
     }
 
     public function complete(Order $order)
@@ -183,8 +183,8 @@ public function queue()
         if ($order->source !== 'customer_qr' || $order->status !== 'preparing') {
             return response()->json(['message' => 'Order belum siap diselesaikan'], 409);
         }
-        $order->update(['status' => 'completed', 'completed_at' => now()]);
-        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items.menu', 'table']))]);
+        $order->update(['status' => 'completed']); // GA ADA completed_at — jangan tambah
+        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items', 'table']))]);
     }
 
     public function reject(Request $request, Order $order)
@@ -193,25 +193,29 @@ public function queue()
         if ($order->source !== 'customer_qr' || !in_array($order->status, ['paid', 'preparing'])) {
             return response()->json(['message' => 'Order tidak bisa ditolak'], 409);
         }
-        $order->update(['status' => 'voided', 'voided_reason' => $data['reason']]);
-        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items.menu', 'table']))]);
+        $order->update([
+            'status' => 'voided',
+            'voided_at' => now(),
+            'voided_reason' => $data['reason'],
+        ]);
+        return response()->json(['data' => $this->transformQueueOrder($order->fresh(['items', 'table']))]);
     }
 
     private function transformQueueOrder(Order $o): array
     {
         return [
-                'id'            => $o->id,
-                'queue_number'  => $o->queue_number,
-                'table_code'    => $o->table?->code,
-                'customer_name' => $o->customer_name,
-                'status'        => $o->status,
-                'total'         => (float) $o->total,
-                'notes'         => $o->voided_reason, // per-item notes hack
-                'paid_at'       => $o->paid_at,
-                'created_at'    => $o->created_at,
-                'items'         => $o->items->map(fn ($it) => [
-                'name'          => $it->menu?->name ?? '—',
-                'quantity'      => $it->quantity,
+            'id'            => $o->id,
+            'queue_number'  => $o->queue_number,
+            'table_code'    => $o->table?->code,
+            'customer_name' => $o->customer_name,
+            'status'        => $o->status,
+            'total'         => (float) $o->total,
+            'notes'         => $o->voided_reason, // catatan customer (per-item notes hack)
+            'paid_at'       => $o->paid_at,
+            'created_at'    => $o->created_at,
+            'items'         => $o->items->map(fn ($it) => [
+                'name'     => $it->menu_name_snapshot,
+                'quantity' => $it->quantity,
             ]),
         ];
     }
