@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\Table;
+use App\Models\User;
+use Filament\Notifications\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -96,6 +98,20 @@ class PublicOrderController extends Controller
             'status' => 'paid',
             'midtrans_transaction_id' => 'SIMULATED-' . uniqid(),
         ]);
+
+        // Lonceng admin: order QR sudah bayar & masuk antrian.
+        // Dikirim ke DB notifications, muncul di bell Filament (polling 15s).
+        $order->loadMissing('table');
+        $admins = User::where('role', 'admin')->get();
+
+        if ($admins->isNotEmpty()) {
+            Notification::make()
+                ->title('Pesanan QR baru masuk')
+                ->body('Meja ' . ($order->table->code ?? '-') . ' · Antrian #' . $order->queue_number)
+                ->icon('heroicon-o-bell-alert')
+                ->success()
+                ->sendToDatabase($admins);
+        }
 
         return response()->json([
             'message' => 'Pembayaran berhasil (simulasi)',
