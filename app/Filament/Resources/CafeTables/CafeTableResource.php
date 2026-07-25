@@ -72,7 +72,7 @@ class CafeTableResource extends Resource
 
         return <<<SVG
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="440" height="680" viewBox="0 0 440 680" font-family="'Poppins','Segoe UI',system-ui,sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" viewBox="0 0 1400 700" preserveAspectRatio="xMidYMid meet" font-family="'Poppins','Segoe UI',system-ui,sans-serif">
   <defs>
     <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F59E0B"/>
@@ -82,6 +82,9 @@ class CafeTableResource extends Resource
       <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.10"/>
     </filter>
   </defs>
+
+  <!-- Center the card on the page -->
+  <g transform="translate(480,10)">
 
   <!-- Card -->
   <rect x="16" y="16" width="408" height="648" rx="26" fill="#FFFFFF" stroke="#F1E7D6" stroke-width="2" filter="url(#soft)"/>
@@ -114,6 +117,7 @@ class CafeTableResource extends Resource
     <g transform="translate(118,634)"><circle r="11" fill="url(#amber)"/><text x="0" y="4" text-anchor="middle" fill="#FFFFFF">1</text><text x="19" y="4" fill="#6B7280">Scan</text></g>
     <g transform="translate(210,634)"><circle r="11" fill="url(#amber)"/><text x="0" y="4" text-anchor="middle" fill="#FFFFFF">2</text><text x="19" y="4" fill="#6B7280">Pilih menu</text></g>
     <g transform="translate(322,634)"><circle r="11" fill="url(#amber)"/><text x="0" y="4" text-anchor="middle" fill="#FFFFFF">3</text><text x="19" y="4" fill="#6B7280">Bayar</text></g>
+    </g>
   </g>
 </svg>
 SVG;
