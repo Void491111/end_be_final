@@ -72,64 +72,49 @@ class CafeTableResource extends Resource
 
         return <<<SVG
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="600" height="920" viewBox="0 0 600 920" font-family="'Poppins','Segoe UI',system-ui,sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="440" height="680" viewBox="0 0 440 680" font-family="'Poppins','Segoe UI',system-ui,sans-serif">
   <defs>
     <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F59E0B"/>
       <stop offset="1" stop-color="#D97706"/>
     </linearGradient>
     <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000000" flood-opacity="0.10"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.10"/>
     </filter>
   </defs>
 
   <!-- Card -->
-  <rect x="20" y="20" width="560" height="880" rx="34" fill="#FFFFFF" stroke="#F1E7D6" stroke-width="2" filter="url(#soft)"/>
+  <rect x="16" y="16" width="408" height="648" rx="26" fill="#FFFFFF" stroke="#F1E7D6" stroke-width="2" filter="url(#soft)"/>
 
-  <!-- Header band -->
-  <rect x="44" y="46" width="512" height="128" rx="24" fill="url(#amber)"/>
-  <g transform="translate(96,86)">
-    <rect x="0" y="6" width="44" height="34" rx="9" fill="#FFFFFF"/>
-    <path d="M44 12 h7 a11 11 0 0 1 0 22 h-5" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
-    <path d="M12 -2 q5 -7 0 -14" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
-    <path d="M26 -2 q5 -7 0 -14" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <!-- Coffee cup (centered) -->
+  <g transform="translate(198,50)">
+    <rect x="0" y="6" width="44" height="34" rx="9" fill="url(#amber)"/>
+    <path d="M44 12 h7 a11 11 0 0 1 0 22 h-5" fill="none" stroke="#D97706" stroke-width="5" stroke-linecap="round"/>
+    <path d="M12 -2 q5 -7 0 -14" fill="none" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+    <path d="M26 -2 q5 -7 0 -14" fill="none" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
   </g>
-  <text x="176" y="104" fill="#FFFFFF" font-size="34" font-weight="700" letter-spacing="1">MOOISTE CAFE</text>
-  <text x="176" y="136" fill="#FFF7ED" font-size="16" font-weight="600" letter-spacing="3">SELF-ORDER · SCAN &amp; PESAN</text>
+  <text x="220" y="128" text-anchor="middle" fill="#B45309" font-size="27" font-weight="700" letter-spacing="1">MOOISTE CAFE</text>
+  <text x="220" y="150" text-anchor="middle" fill="#9A8C74" font-size="11" font-weight="600" letter-spacing="3">SELF-ORDER · SCAN &amp; PESAN</text>
+  <line x1="150" y1="168" x2="290" y2="168" stroke="#F0E4D2" stroke-width="2"/>
 
   <!-- Table identity -->
-  <text x="300" y="232" text-anchor="middle" fill="#B45309" font-size="18" font-weight="700" letter-spacing="6">MEJA</text>
-  <text x="300" y="322" text-anchor="middle" fill="#1F2937" font-size="88" font-weight="800" letter-spacing="1">{$code}</text>
-  <text x="300" y="356" text-anchor="middle" fill="#6B7280" font-size="22" font-weight="500">{$name}</text>
+  <text x="220" y="208" text-anchor="middle" fill="#B45309" font-size="14" font-weight="700" letter-spacing="6">MEJA</text>
+  <text x="220" y="274" text-anchor="middle" fill="#1F2937" font-size="66" font-weight="800">{$code}</text>
+  <text x="220" y="302" text-anchor="middle" fill="#6B7280" font-size="17" font-weight="500">{$name}</text>
 
   <!-- QR panel -->
-  <rect x="100" y="384" width="400" height="400" rx="30" fill="#FFFFFF" stroke="#EFE7DA" stroke-width="2" filter="url(#soft)"/>
-  <image x="120" y="404" width="360" height="360" href="{$qrDataUri}" xlink:href="{$qrDataUri}"/>
+  <rect x="95" y="326" width="250" height="250" rx="22" fill="#FFFFFF" stroke="#EFE7DA" stroke-width="2" filter="url(#soft)"/>
+  <image x="110" y="341" width="220" height="220" href="{$qrDataUri}" xlink:href="{$qrDataUri}"/>
 
   <!-- Instruction -->
-  <text x="300" y="824" text-anchor="middle" fill="#1F2937" font-size="23" font-weight="700">Scan untuk pesan &amp; bayar dari meja</text>
+  <text x="220" y="612" text-anchor="middle" fill="#1F2937" font-size="17" font-weight="700">Scan untuk pesan &amp; bayar dari meja</text>
 
   <!-- Steps -->
-  <g font-size="15" font-weight="600">
-    <g transform="translate(150,852)">
-      <circle cx="0" cy="0" r="13" fill="url(#amber)"/>
-      <text x="0" y="5" text-anchor="middle" fill="#FFFFFF">1</text>
-      <text x="24" y="5" fill="#6B7280">Scan</text>
-    </g>
-    <g transform="translate(275,852)">
-      <circle cx="0" cy="0" r="13" fill="url(#amber)"/>
-      <text x="0" y="5" text-anchor="middle" fill="#FFFFFF">2</text>
-      <text x="24" y="5" fill="#6B7280">Pilih menu</text>
-    </g>
-    <g transform="translate(430,852)">
-      <circle cx="0" cy="0" r="13" fill="url(#amber)"/>
-      <text x="0" y="5" text-anchor="middle" fill="#FFFFFF">3</text>
-      <text x="24" y="5" fill="#6B7280">Bayar</text>
-    </g>
+  <g font-size="12" font-weight="600">
+    <g transform="translate(118,634)"><circle r="11" fill="url(#amber)"/><text x="0" y="4" text-anchor="middle" fill="#FFFFFF">1</text><text x="19" y="4" fill="#6B7280">Scan</text></g>
+    <g transform="translate(210,634)"><circle r="11" fill="url(#amber)"/><text x="0" y="4" text-anchor="middle" fill="#FFFFFF">2</text><text x="19" y="4" fill="#6B7280">Pilih menu</text></g>
+    <g transform="translate(322,634)"><circle r="11" fill="url(#amber)"/><text x="0" y="4" text-anchor="middle" fill="#FFFFFF">3</text><text x="19" y="4" fill="#6B7280">Bayar</text></g>
   </g>
-
-  <!-- Footer url -->
-  <text x="300" y="890" text-anchor="middle" fill="#B8B0A2" font-size="12">{$safeUrl}</text>
 </svg>
 SVG;
     }
@@ -179,7 +164,7 @@ SVG;
                         $url = $record->order_url;
 
                         $qrSvg = QrCode::format('svg')
-                            ->size(360)
+                            ->size(220)
                             ->margin(1)
                             ->errorCorrection('H')
                             ->color(31, 41, 55)
