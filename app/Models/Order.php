@@ -70,11 +70,36 @@ class Order extends Model
     }
 
     // Generate queue number: A001, A002, ... A999, A1000, ...
+    // WAJIB dipanggil di dalam DB::transaction — lock-nya baru lepas pas commit.
+    // Tanpa lockForUpdate, dua order bersamaan baca last yang sama dan bentrok
+    // di unique constraint queue_number (500).
     public static function generateQueueNumber(): string
     {
-        $lastOrder = static::latest('id')->first();
-        $nextNumber = $lastOrder ? ((int) substr($lastOrder->queue_number, 1)) + 1 : 1;
+        $last = static::query()
+            ->lockForUpdate()
+            ->orderByDesc('id')
+            ->value('queue_number');
+
+        $nextNumber = $last ? ((int) substr($last, 1)) + 1 : 1;
         return 'A' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+
+    // Backstop kalau row lock kelewat (mis. tabel orders masih kosong, jadi gaada
+    // row buat dikunci). Retry seluruh transaksi kalau queue_number bentrok.
+    public static function withQueueNumberRetry(callable $callback, int $attempts = 3)
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return $callback();
+            } catch (QueryException $e) {
+                $isDuplicateQueueNumber = $e->getCode() === '23000'
+                    && str_contains($e->getMessage(), 'queue_number');
+
+                if (! $isDuplicateQueueNumber || $attempt >= $attempts) {
+                    throw $e;
+                }
+            }
+        }
     }
 
     // Midtrans order ID unik per attempt (bisa retry payment)
