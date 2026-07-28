@@ -72,14 +72,16 @@ class MenuController extends Controller
                 ->toArray();
         }
 
-        private function fetchMenusByIds(array $ids, array $excludeIds, int $limit)
+        // $bestSellers dioper dari pemanggil — jangan panggil getBestSellerMap() di dalam
+        // callback sort, itu bikin query aggregate jalan ulang sekali per menu.
+        private function fetchMenusByIds(array $ids, array $excludeIds, int $limit, array $bestSellers)
         {
             return Menu::with('category:id,name,slug')
                 ->where('is_available', true)
                 ->whereIn('id', array_slice($ids, 0, $limit * 2))
                 ->whereNotIn('id', $excludeIds)
                 ->get()
-                ->sortByDesc(fn ($m) => $this->getBestSellerMap()[$m->id] ?? 0)
+                ->sortByDesc(fn ($m) => $bestSellers[$m->id] ?? 0)
                 ->take($limit);
         }
 
