@@ -155,11 +155,11 @@ class PublicOrderController extends Controller
         return [$subtotal, $data];
     }
 
-    private function composeNotes(array $items): string
+    private function composeNotes(array $items, $menus): string
     {
         return collect($items)
             ->filter(fn ($i) => !empty($i['notes'] ?? null))
-            ->map(fn ($i) => Menu::find($i['menu_id'])->name . ': ' . $i['notes'])
+            ->map(fn ($i) => $menus->get($i['menu_id'])?->name . ': ' . $i['notes'])
             ->implode(' | ');
     }
 
