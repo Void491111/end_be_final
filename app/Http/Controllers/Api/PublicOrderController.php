@@ -124,13 +124,17 @@ class PublicOrderController extends Controller
         ]);
     }
 
-    private function buildItems(array $items): array
+    private function buildItems(array $items, $menus): array
     {
         $subtotal = 0;
         $data = [];
 
         foreach ($items as $item) {
-            $menu = Menu::find($item['menu_id']);
+            $menu = $menus->get($item['menu_id']);
+
+            if (!$menu) {
+                abort(422, 'Menu tidak ditemukan.');
+            }
 
             if (!$menu->is_available) {
                 abort(422, "{$menu->name} sedang tidak tersedia.");
