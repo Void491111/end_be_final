@@ -62,7 +62,7 @@ class PublicOrderController extends Controller
             $order->items()->createMany($itemsData);
 
             return response()->json($this->orderPayload($order->fresh(['items', 'table']), 'Pesanan berhasil dibuat'), 201);
-        });
+        }));
     }
 
     // GET /api/public/orders/{id}/status
