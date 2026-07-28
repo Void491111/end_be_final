@@ -71,18 +71,31 @@ class Order extends Model
     }
 
     // Generate queue number: A001, A002, ... A999, A1000, ...
-    // WAJIB dipanggil di dalam DB::transaction — lock-nya baru lepas pas commit.
-    // Tanpa lockForUpdate, dua order bersamaan baca last yang sama dan bentrok
-    // di unique constraint queue_number (500).
+    //
+    // Naikin counter dulu, baru baca hasilnya. UPDATE-nya ngunci satu baris lewat
+    // primary key, jadi order yang barengan otomatis antre dan tiap proses dapet
+    // nomor sendiri. Jangan balik ke MAX(queue_number)/latest() — dua order
+    // bersamaan bakal baca nilai yang sama terus bentrok di unique constraint.
+    // WAJIB dipanggil di dalam DB::transaction, dan sebaiknya jadi statement
+    // pertama, biar urutan lock-nya konsisten (bebas deadlock).
     public static function generateQueueNumber(): string
     {
-        $last = static::query()
-            ->lockForUpdate()
-            ->orderByDesc('id')
-            ->value('queue_number');
+        DB::table('counters')->where('name', 'order_queue')->increment('value');
+        $nextNumber = DB::table('counters')->where('name', 'order_queue')->value('value');
 
-        $nextNumber = $last ? ((int) substr($last, 1)) + 1 : 1;
         return 'A' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+
+    // Samain counter dengan nomor order tertinggi yang ada. Dipanggil setelah
+    // reset/seed, atau kalau DB di-restore dari dump yang gak bawa tabel counters.
+    public static function syncQueueCounter(): int
+    {
+        $last = static::orderByDesc('id')->value('queue_number');
+        $value = $last ? (int) substr($last, 1) : 0;
+
+        DB::table('counters')->updateOrInsert(['name' => 'order_queue'], ['value' => $value]);
+
+        return $value;
     }
 
     // Backstop kalau row lock kelewat (mis. tabel orders masih kosong, jadi gaada
