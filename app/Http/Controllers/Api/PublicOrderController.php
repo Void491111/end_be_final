@@ -26,16 +26,21 @@ class PublicOrderController extends Controller
             'items.*.notes' => 'nullable|string|max:200',
         ]);
 
-        return DB::transaction(function () use ($validated) {
+        return Order::withQueueNumberRetry(fn () => DB::transaction(function () use ($validated) {
             $table = Table::where('code', $validated['table_code'])->first();
 
             if (!$table->is_active) {
                 abort(403, 'Meja tidak aktif');
             }
 
-            [$subtotal, $itemsData] = $this->buildItems($validated['items']);
+            // Satu query buat semua menu — dipakai bareng buildItems & composeNotes.
+            $menus = Menu::whereIn('id', array_unique(array_column($validated['items'], 'menu_id')))
+                ->get(['id', 'name', 'price', 'is_available'])
+                ->keyBy('id');
+
+            [$subtotal, $itemsData] = $this->buildItems($validated['items'], $menus);
             $tax = $subtotal * 0.10;
-            $notes = $this->composeNotes($validated['items']);
+            $notes = $this->composeNotes($validated['items'], $menus);
 
             $order = Order::create([
                 'queue_number' => Order::generateQueueNumber(),
