@@ -73,7 +73,7 @@ class OrderController extends Controller
             $order->items()->createMany($itemsData);
 
             return response()->json($order->load('items', 'user:id,name'), 201);
-        });
+        }));
     }
 
     public function index(Request $request)
