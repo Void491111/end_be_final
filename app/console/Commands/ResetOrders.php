@@ -31,6 +31,11 @@ class ResetOrders extends Command
             Artisan::call('db:seed', ['--class' => 'OrderSeeder'], $this->output);
         }
 
+        // Counter nomor antrian ikut disamain, biar order berikutnya nyambung
+        // sama data yang ada (balik ke A001 kalau tabel orders dikosongin).
+        $counter = Order::syncQueueCounter();
+        $this->info("✓ Counter antrian di-set ke {$counter}.");
+
         return self::SUCCESS;
     }
 }
