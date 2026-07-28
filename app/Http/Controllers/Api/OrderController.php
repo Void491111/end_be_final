@@ -20,12 +20,21 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
+        return Order::withQueueNumberRetry(fn () => DB::transaction(function () use ($validated, $request) {
+            // Ambil semua menu sekali, jangan Menu::find() per item di dalam loop.
+            $menus = Menu::whereIn('id', array_unique(array_column($validated['items'], 'menu_id')))
+                ->get(['id', 'name', 'price', 'is_available'])
+                ->keyBy('id');
+
             $subtotal = 0;
             $itemsData = [];
 
             foreach ($validated['items'] as $item) {
-                $menu = Menu::find($item['menu_id']);
+                $menu = $menus->get($item['menu_id']);
+
+                if (! $menu) {
+                    abort(422, 'Menu tidak ditemukan.');
+                }
 
                 if (! $menu->is_available) {
                     abort(422, "{$menu->name} sedang tidak tersedia.");
