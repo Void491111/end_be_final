@@ -41,7 +41,8 @@ class MenuController extends Controller
     // Query param: limit (default 5), exclude (comma-separated menu IDs)
     public function recommendations(Request $request)
         {
-            $limit = (int) $request->input('limit', 5);
+            // Clamp limit — dipakai buat slice kandidat, jangan biarin client minta ribuan.
+            $limit = max(1, min((int) $request->input('limit', 5), 50));
             $excludeIds = $request->filled('exclude')
                 ? array_map('intval', explode(',', $request->input('exclude')))
                 : [];
@@ -52,7 +53,7 @@ class MenuController extends Controller
                 return response()->json(['data' => []]);
             }
 
-            $menus = $this->fetchMenusByIds(array_keys($bestSellers), $excludeIds, $limit);
+            $menus = $this->fetchMenusByIds(array_keys($bestSellers), $excludeIds, $limit, $bestSellers);
 
             return response()->json([
                 'data' => $menus->map(fn ($m) => $this->transformMenu($m, $bestSellers))->values(),
