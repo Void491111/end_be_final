@@ -159,11 +159,23 @@ class OrderController extends Controller
 
     public function queue()
     {
-        $orders = Order::with(['items', 'table'])
+        // Aktif (belum kelar): FIFO by created_at = urutan pesanan masuk
+        $active = Order::with(['items', 'table'])
             ->where('source', 'customer_qr')
             ->whereIn('status', ['paid', 'preparing'])
             ->orderBy('created_at')
-            ->get()
+            ->get();
+
+        // Selesai HARI INI: tetap ditampilkan biar kasir liat mana yg udah kelar.
+        // Pakai updated_at karena kolom completed_at sengaja gak ada di schema.
+        $doneToday = Order::with(['items', 'table'])
+            ->where('source', 'customer_qr')
+            ->where('status', 'completed')
+            ->whereDate('updated_at', today())
+            ->orderByDesc('updated_at')
+            ->get();
+
+        $orders = $active->concat($doneToday)
             ->map(fn ($o) => $this->transformQueueOrder($o));
 
         return response()->json(['data' => $orders]);
