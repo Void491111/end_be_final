@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Batch 7: Cashier QR Queue (HARUS di atas orders/{order}) ──
     Route::get('/orders/queue', [OrderController::class, 'queue']);
     Route::get('/orders/queue/count', [OrderController::class, 'queueCount']);
+    Route::get('/orders/cashier-recent', [OrderController::class, 'cashierRecent']);
     Route::patch('/orders/{order}/confirm', [OrderController::class, 'confirm']);
     Route::patch('/orders/{order}/reject', [OrderController::class, 'reject']);
     Route::patch('/orders/{order}/complete', [OrderController::class, 'complete']);

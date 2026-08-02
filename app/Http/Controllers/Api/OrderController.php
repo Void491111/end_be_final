@@ -18,6 +18,9 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.menu_id' => 'required|exists:menus,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.ice_level' => 'nullable|string|max:30',
+            'items.*.sugar_level' => 'nullable|string|max:30',
+            'items.*.notes' => 'nullable|string|max:200',
         ]);
 
         return Order::withQueueNumberRetry(fn () => DB::transaction(function () use ($validated, $request) {
@@ -68,12 +71,76 @@ class OrderController extends Controller
                 'payment_status' => 'settlement',
                 'paid_at' => now(),
                 'status' => 'completed',
+                'voided_reason' => $this->composeCashierNotes($validated['items'], $menus),
             ]);
 
             $order->items()->createMany($itemsData);
 
             return response()->json($order->load('items', 'user:id,name'), 201);
         }));
+    }
+
+    private function composeCashierNotes(array $items, $menus): ?string
+    {
+        $result = collect($items)
+            ->map(function ($i) use ($menus) {
+                $parts = [];
+
+                // "Normal" = default, gak perlu ditulis
+                foreach (['ice_level', 'sugar_level'] as $key) {
+                    $val = trim((string) ($i[$key] ?? ''));
+                    if ($val !== '' && strcasecmp($val, 'Normal') !== 0) {
+                        $parts[] = $val;
+                    }
+                }
+
+                $note = trim((string) ($i['notes'] ?? ''));
+                if ($note !== '') {
+                    $parts[] = $note;
+                }
+
+                if (empty($parts)) {
+                    return null;
+                }
+
+                $name = $menus->get($i['menu_id'])?->name ?? 'Item';
+
+                return $name . ' x' . $i['quantity'] . ': ' . implode(', ', $parts);
+            })
+            ->filter()
+            ->implode(' | ');
+
+        return $result ?: null;
+    }
+
+    /**
+     * Order kasir HARI INI buat slider POS. Cuma baca data existing.
+     */
+    public function cashierRecent(Request $request)
+    {
+        $limit = min((int) $request->input('limit', 20), 50);
+
+        $orders = Order::with('items')
+            ->where('source', 'cashier')
+            ->where('status', 'completed')
+            ->whereDate('created_at', today())
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($o) => [
+                'id'           => $o->id,
+                'queue_number' => $o->queue_number,
+                'order_type'   => $o->order_type,
+                'total'        => (float) $o->total,
+                'created_at'   => $o->created_at,
+                'custom'       => $o->voided_reason,
+                'items'        => $o->items->map(fn ($it) => [
+                    'name'     => $it->menu_name_snapshot,
+                    'quantity' => $it->quantity,
+                ]),
+            ]);
+
+        return response()->json(['data' => $orders]);
     }
 
     public function index(Request $request)
