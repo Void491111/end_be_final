@@ -80,8 +80,7 @@ class PublicOrderController extends Controller
     }
 
     // POST /api/public/orders/{id}/simulate-payment
-    // SIMULATE Midtrans QRIS settlement (buat demo lokal — di production akan digantikan webhook Midtrans)
-    // Cuma boleh dari pending_payment; guard idempotent — kalo udah paid, no-op
+    // SIMULATE Midtrans QRIS settlement 
     public function simulatePayment(int $id)
     {
         $order = Order::where('source', 'customer_qr')->find($id);
