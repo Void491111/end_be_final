@@ -71,14 +71,7 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    // Generate queue number: A001, A002, ... A999, A1000, ...
-    //
-    // Naikin counter dulu, baru baca hasilnya. UPDATE-nya ngunci satu baris lewat
-    // primary key, jadi order yang barengan otomatis antre dan tiap proses dapet
-    // nomor sendiri. Jangan balik ke MAX(queue_number)/latest() — dua order
-    // bersamaan bakal baca nilai yang sama terus bentrok di unique constraint.
-    // WAJIB dipanggil di dalam DB::transaction, dan sebaiknya jadi statement
-    // pertama, biar urutan lock-nya konsisten (bebas deadlock).
+    
     public static function generateQueueNumber(): string
     {
         DB::table('counters')->where('name', 'order_queue')->increment('value');
