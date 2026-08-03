@@ -38,10 +38,9 @@ class MenuController extends Controller
     }
 
     // GET /api/menus/recommendations (auth) atau /api/public/recommendations (no auth)
-    // Query param: limit (default 5), exclude (comma-separated menu IDs)
     public function recommendations(Request $request)
         {
-            // Clamp limit — dipakai buat slice kandidat, jangan biarin client minta ribuan.
+            // Clamp limit — dipakai buat slice kandidat, antspasi cilent mnta ribuan.
             $limit = max(1, min((int) $request->input('limit', 5), 50));
             $excludeIds = $request->filled('exclude')
                 ? array_map('intval', explode(',', $request->input('exclude')))
