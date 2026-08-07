@@ -29,7 +29,7 @@ class AlifPanelProvider extends PanelProvider
             ->path('alif')
             ->login()
             ->databaseNotifications()
-            ->databaseNotificationsPolling('15s')
+            ->databaseNotificationsPolling('5s')
             ->brandName('De-Mooiste-Cafe')
             ->colors([
                 'primary' => Color::Gray,
