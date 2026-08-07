@@ -128,6 +128,7 @@ class OrdersTable
                     ->query(fn (Builder $query): Builder => $query->whereDate('created_at', today())),
             ])
             ->recordUrl(fn ($record) => \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $record]))
+            ->poll('5s')
             ->defaultSort('created_at', 'desc');
     }
 }
